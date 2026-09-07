@@ -1,0 +1,17 @@
+{
+  "name": "iridium",
+  "owner": {
+    "name": "cubk"
+  },
+  "metadata": {
+    "description": "Iridium Minecraft 客户端的 Claude Code 插件市场",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "iridium-script",
+      "source": "./",
+      "description": "为 Iridium 编写 JavaScript 脚本的 skill，含 IridiumMCP 调试工具链说明。"
+    }
+  ]
+}

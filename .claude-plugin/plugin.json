@@ -1,0 +1,16 @@
+{
+  "name": "iridium-script",
+  "description": "为 Iridium Minecraft 客户端编写 JavaScript 脚本。",
+  "version": "0.1.0",
+  "author": {
+    "name": "cubk"
+  },
+  "homepage": "https://iridium.styles.wtf",
+  "keywords": [
+    "minecraft",
+    "iridium",
+    "javascript",
+    "scripting",
+    "forge"
+  ]
+}
