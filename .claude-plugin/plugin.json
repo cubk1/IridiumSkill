@@ -1,7 +1,7 @@
 {
   "name": "iridium-script",
   "description": "为 Iridium Minecraft 客户端编写 JavaScript 脚本。",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": {
     "name": "cubk"
   },

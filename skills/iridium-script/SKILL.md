@@ -1,11 +1,11 @@
 ---
 name: iridium-script
-description: 为 Iridium（Minecraft 1.20.1 Forge 客户端）编写 JavaScript 脚本，涵盖模块/HUD/命令注册、事件监听、Nashorn 风格 Java 互操作，以及 IridiumMCP 调试工具链。在以下任一情况使用：用户提到 Iridium 或客户端脚本；要求注册模块、HUD 或聊天命令；涉及 %APPDATA%\scripts 下的 .js 文件；当前工作目录位于 %APPDATA%\scripts；或用户只描述功能需求（如"帮我写个自动冲刺"）而未提及 Iridium，但上下文表明是该客户端。
+description: 为 Iridium（Minecraft 1.20.1/1.21.10 Forge 客户端）编写 JavaScript 脚本，涵盖模块/HUD/命令注册、事件监听、Nashorn 风格 Java 互操作，以及 IridiumMCP 调试工具链。在以下任一情况使用：用户提到 Iridium 或客户端脚本；要求注册模块、HUD 或聊天命令；涉及 %APPDATA%\scripts 下的 .js 文件；当前工作目录位于 %APPDATA%\scripts；或用户只描述功能需求（如"帮我写个自动冲刺"）而未提及 Iridium，但上下文表明是该客户端。
 ---
 
 ## 简介
 
-Iridium 是一个 Minecraft 1.20.1 客户端，基于Forge运行，带有一个基于Java Script的脚本执行器
+Iridium 是一个 Minecraft 1.20.1/1.21.10 客户端，基于Forge运行，带有一个基于Java Script的脚本执行器
 
 脚本可以注册模块、设置项、HUD 元素和聊天命令，监听游戏事件，直接调用 Java API。
 
@@ -16,7 +16,12 @@ Iridium 是一个 Minecraft 1.20.1 客户端，基于Forge运行，带有一个�
 - `types.d.ts`: 所有脚本API、Minecraft API大致定义，大部分为Minecraft API，你需要至少阅读Client API章节，Minecraft Types章节供速查
 - `IridiumMCP`: 提供一些工具帮助你开发
 
-如果用户未提供`types.d.ts`，通过`https://iridium.styles.wtf/assets/types.d.ts`下载，而不是要求用户提供。
+必须先咨询用户（如果用户未提供）写的脚本需要哪个版本，根据不同的版本下载types.d.ts，了解对应的Minecraft API
+
+- https://iridium.styles.wtf/assets/1.21.10/types.d.ts
+- https://iridium.styles.wtf/assets/1.20.1/types.d.ts
+
+如果用户要求两个版本都兼容则使用`client.getMinecraftVersion()`来判断版本，执行对应的逻辑。
 
 所有的API定义都在`types.d.ts`务必看
 
@@ -313,3 +318,135 @@ events.on("fov", function (e) { e.factor = 1.5; });
 
 渲染分两个事件：`render2d` 画屏幕 UI（给你 `graphics`），`render3d` 画世界内容
 （`render.drawTag` / `render.drawBox` 只能在这里调）。
+
+## 3.2.0 更新内容
+
+客户端 3.2.0 对脚本系统进行了大更新（强制更新，不需要判断版本，以下特性均可直接使用），如果你保留了之前的记忆需要了解如下更新的新特性：
+
+### Java特性
+
+| 特性 | 示例 |
+| --- | --- |
+| Method Reference | `list.stream().map(java.lang.String::length)`、`java.lang.Integer::parseInt`、`'text'::length`、`X::new` |
+| 包名直接访问类 | `var File = java.io.File;` `net.minecraft.core.BlockPos` |
+| `Packages` 根 | `new Packages.java.util.HashMap()` |
+| `JavaImporter` + `with` | `with (new JavaImporter(java.io, java.util)) { new File('a'); new HashMap(); }` |
+| 函数自动转接口（SAM） | `new java.lang.Thread(function () { ... }).start()` |
+| 匿名类 | `new java.lang.Runnable() { run: function () { ... } }` |
+| 继承类 / 实现多个接口 | `Java.extend(java.util.ArrayList, { add: function (x) { return Java.super(this).add(x); } })` |
+| `Java.super` | 在覆盖方法里调用父类实现 |
+| `Java.to` | `Java.to([1, 2], 'int[]')` |
+| `X.class` | `java.util.ArrayList.class`（Nashorn 兼容） |
+| 迭代 Java 集合 | `for (var p of mc.level.players())`、`[...list]`、`var [a, b] = list`；Map 产出 `[key, value]`，也支持 Iterator、Stream、Java 数组 |
+| 对象相等 | `mc.player === mc.player` 为 true；`===`、`Object.is`、Map/Set 的键都按底层 Java 对象比较 |
+| `instanceof`关键字 | `p instanceof net.minecraft.world.entity.player.Player`；`Java.extend` 生成的类也支持 |
+| JS 数组传给 Java | 自动转成 Java 数组或 `List`，varargs 方法可以直接传数组：`LongStream.of([1, 2, 3])` |
+| 静态字段 | 实时读写，并按字段类型转换（以前读到的是快照）；final 字段只读 |
+
+### 客户端API
+
+旧的 `client.getBool(...)` 等扁平接口**全部保留**，新增一套对象接口：
+
+```js
+var aura = moduleManager.getModule('Legit Aura');
+aura.enabled = true;                         // 与点击 GUI 一致（有通知）
+aura.key = 'R';                              // 支持键名
+for (var p of aura.getProperties()) {
+    log(p.label, p.type, p.value, p.visible);
+}
+var mode = aura.getProperty('Mode');
+mode.cycle();                                // Single -> Switch
+mode.children;                               // 只返回当前条件下可见的子设置
+```
+
+- **`moduleManager`**：`getModule`、`getModules(category?)`、`getEnabledModules`、`getCategories`、`getCategoryParents`、`getProperty(id)`、`hasModule`。
+- **`Module`**
+  - 基本信息：`name`、`category`/`categoryParent`/`categoryLeaf`、`description`（可写）、`icon`、`inline`、`script`、`keyName`。
+  - 可读写：`enabled`、`key`。
+  - 方法：`toggle`/`enable`/`disable`/`setEnabled(v, silent)`、`getProperties`/`getAllProperties`/`getProperty`、`getBinds`、`bind(key, options)`。
+- **`Property`**
+  - 可读写：`value`，写入时会校验：滑块限制范围并对齐步长，mode 拒绝未知选项，multi 丢弃未知选项。
+  - 只读信息：`type`、`defaultValue`、`min`/`max`/`inc`、`options`、`optionIcons`、`hint`、`condition`。
+  - 界面相关：`visible`（包含父级条件）、`hidden`（可写）、`label`（可写）。
+  - 层级关系：`parent`、`children`、`swatch`。
+  - 方法：`reset`、`toggle`、`cycle`、`select`/`deselect`/`isSelected`/`toggleOption`。
+- 包装对象会被缓存（同一模块/属性总是同一个对象），每次读取都拿实时状态；对象被注销后再访问会抛 `ReferenceError`。
+
+```js
+var bind = keybindManager.add(aura, 'KP_8', { mode: 'hold' });
+bind.key = 'MOUSE4';
+bind.remove();
+
+var m = macroManager.add('Message', { name: 'gg', message: '/hub', key: 'H' });
+m.run();
+```
+
+- `keybindManager`：`getBinds`、`getBind`、`find(target)`、`add`、`remove`、`keyCode`、`keyName`。
+- `Bind`：`target`、`key`、`mode`、`value`、`visible`、`isModule`、`module`、`property`、`update()`、`remove()`。
+- `macroManager`：`getMacros`、`getMacro`、`add('Message' | 'Item', options)`、`remove`、`run`。
+- `Macro`：`name`、`key`、`message`、`item`、`match`、`rotation`、`switchMode`、`yawOffset`、`pitch`、`update()`、`run()`、`remove()`。
+
+| 事件 | 参数 | 说明 |
+| --- | --- | --- |
+| `click` | `(button, action, x, y)` | 所有鼠标按键的按下/松开，返回 true 取消 |
+| `scroll` | `(delta, x, y)` | 滚轮，返回 true 取消（例如阻止切换快捷栏） |
+| `charTyped` | `(char, codepoint)` | 字符输入（支持中文），返回 true 取消 |
+| `keyInput` | `(key, action)` | **所有**键盘事件（按下 1 / 松开 0 / 重复 2），任何界面下都触发，返回 true 可吞掉按键 |
+
+原有的 `key` 事件语义不变（只在游戏中或容器界面里触发，只报告按下）。
+
+`input` 提供：`getMouseX/Y`（和 `render2d` 同一套 GUI 坐标）、`getScreenWidth/Height`、`getGuiScale`、`isMouseDown`、`isKeyDown`、`isMouseGrabbed`/`setMouseGrabbed`（释放或抓取鼠标）、`isScreenOpen`、`keyCode`/`keyName`。
+
+**键名**：凡是需要按键的地方都接受 `'R'`、`'F5'`、`'LSHIFT'`、`'KP_9'`/`'NUMPAD9'`、`'M4'`/`'MOUSE4'`、`'key.keyboard.r'`，或直接传键码。`keyName` 和 `keyCode` 可以互相转换回来。
+
+- `render.bloom(graphics, x, y, w, h, radius, color, spread, intensity)`：圆角矩形发光。
+- `client.getUsername()`、`client.getVersion()`、`client.getMinecraftVersion()`。
+
+### Forge 事件 Hook
+
+```js
+var id = events.onForge('LivingDeathEvent', function (e) { log(e.getEntity()); });
+events.onForge('ClientChatReceivedEvent', function (e) { return /spam/.test(e.getMessage().getString()); }); // true = 取消
+events.offForge(id);
+```
+
+- 事件类型可以传 Java 类，也可以传名字：简单名（`LivingDeathEvent`）、嵌套名（`RenderGuiOverlayEvent.Pre`）或全名，子类同样会匹配。
+- 选项：`phase: 'pre' | 'post'`（在 Forge 自己的监听器之前或之后）、`receiveCanceled`、`anyThread`（默认只收主线程发出的事件）。
+
+### Event Loop
+
+`setTimeout`、`setInterval`、`clearTimeout`、`clearInterval`、`queueMicrotask`，Promise/async。
+
+### Fetch（WHATWG）
+
+```js
+const res = await fetch('https://example.com/api', {
+  method: 'POST',
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({ a: 1 }),
+});
+const data = await res.json();
+```
+
+- 重定向支持 `follow`、`manual`、`error` 三种模式，最多 20 跳。
+- 支持 `AbortController`/`AbortSignal`，包括 `AbortSignal.timeout`/`any`。
+- **流式读取**：响应头一到就 resolve，响应体通过 `res.body`（`ReadableStream`）分块到达。
+- 自动发送 `accept-encoding: gzip, deflate` 并自动解压。
+- 配套对象：`Request`、`Response`（包括 `json`/`redirect`/`error`/`clone`）、`Headers`、`URL`、`URLSearchParams`、`Blob`、`TextEncoder`、`TextDecoder`、`DOMException`。
+
+### Deno
+
+```js
+const server = Deno.serve({ port: 8080 }, async (req) => {
+  const url = new URL(req.url);
+  switch (url.pathname) {
+    case '/hello': return new Response('hi');
+    case '/echo':  return Response.json(await req.json());
+    case '/sse':   return new Response(new ReadableStream({
+      async pull(c) { await new Promise(r => setTimeout(r, 1000)); c.enqueue('data: tick\n\n'); },
+      cancel() { log('client left'); }
+    }), { headers: { 'content-type': 'text/event-stream' } });
+    default: return new Response('not found', { status: 404 });
+  }
+});
+```
