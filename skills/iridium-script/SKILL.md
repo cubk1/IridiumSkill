@@ -1,11 +1,11 @@
 ---
 name: iridium-script
-description: 为 Iridium（Minecraft 1.20.1/1.21.10 Forge 客户端）编写 JavaScript 脚本，涵盖模块/HUD/命令注册、事件监听、Nashorn 风格 Java 互操作，以及 IridiumMCP 调试工具链。在以下任一情况使用：用户提到 Iridium 或客户端脚本；要求注册模块、HUD 或聊天命令；涉及 %APPDATA%\scripts 下的 .js 文件；当前工作目录位于 %APPDATA%\scripts；或用户只描述功能需求（如"帮我写个自动冲刺"）而未提及 Iridium，但上下文表明是该客户端。
+description: 为 Iridium（Minecraft 1.20.1/1.21.8/1.21.10 Forge 客户端）编写 JavaScript 脚本，涵盖模块/HUD/命令注册、事件监听、Nashorn 风格 Java 互操作，以及 IridiumMCP 调试工具链。在以下任一情况使用：用户提到 Iridium 或客户端脚本；要求注册模块、HUD 或聊天命令；涉及 %APPDATA%\scripts 下的 .js 文件；当前工作目录位于 %APPDATA%\scripts；或用户只描述功能需求（如"帮我写个自动冲刺"）而未提及 Iridium，但上下文表明是该客户端。
 ---
 
 ## 简介
 
-Iridium 是一个 Minecraft 1.20.1/1.21.10 客户端，基于Forge运行，带有一个基于Java Script的脚本执行器
+Iridium 是一个 Minecraft 1.20.1/1.21.8/1.21.10 客户端，基于Forge运行，带有一个基于Java Script的脚本执行器
 
 脚本可以注册模块、设置项、HUD 元素和聊天命令，监听游戏事件，直接调用 Java API。
 
@@ -19,6 +19,7 @@ Iridium 是一个 Minecraft 1.20.1/1.21.10 客户端，基于Forge运行，带�
 必须先咨询用户（如果用户未提供）写的脚本需要哪个版本，根据不同的版本下载types.d.ts，了解对应的Minecraft API
 
 - https://iridium.styles.wtf/assets/1.21.10/types.d.ts
+- https://iridium.styles.wtf/assets/1.21.8/types.d.ts
 - https://iridium.styles.wtf/assets/1.20.1/types.d.ts
 
 如果用户要求两个版本都兼容则使用`client.getMinecraftVersion()`来判断版本，执行对应的逻辑。
